@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анализ рынка ЛКМ — Дашборд</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+  --primary:#1e3a8a;--primary2:#3b82f6;--accent:#f59e0b;--success:#059669;
+  --premium:#7c3aed;--danger:#dc2626;
+  --shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--primary2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Layout */
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+@media(max-width:1024px){.app{grid-template-columns:1fr}}
+
+/* Sidebar */
+.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;
+  background:linear-gradient(180deg,#0f172a,#1e293b);color:#e2e8f0;padding:24px 16px}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+.sidebar h1{font-size:15px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3}
+.sidebar .sub{font-size:11px;color:#94a3b8;margin-bottom:20px;text-transform:uppercase;letter-spacing:1.1px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;
+  color:#cbd5e1;font-size:13px;font-weight:500;transition:all .15s}
+.nav a:hover{background:rgba(255,255,255,.06);color:#fff;text-decoration:none}
+.nav a.active{background:var(--primary2);color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.35)}
+.nav .gl{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;
+  color:#64748b;margin:14px 11px 5px;font-weight:700}
+.nav .dot{width:6px;height:6px;border-radius:50%;background:#475569;flex-shrink:0}
+.nav a.active .dot{background:#fff}
+
+/* Main */
+.main{padding:30px 38px 80px;max-width:1500px}
+@media(max-width:768px){.main{padding:18px 14px 60px}}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:20px;margin-bottom:26px;flex-wrap:wrap}
+.topbar h2{font-size:25px;font-weight:800;letter-spacing:-.4px}
+.topbar p{color:var(--muted);font-size:13px;margin-top:3px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#fff;
+  border:1px solid var(--line);padding:6px 12px;border-radius:999px;
+  font-size:12px;font-weight:600;color:var(--muted);box-shadow:var(--shadow)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:13px;margin-bottom:26px}
+.kpi{background:var(--panel);border-radius:var(--radius);padding:17px 19px;
+  box-shadow:var(--shadow);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--primary2)}
+.kpi.g::before{background:var(--success)}
+.kpi.o::before{background:var(--accent)}
+.kpi.p::before{background:var(--premium)}
+.kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600}
+.kpi .value{font-size:23px;font-weight:800;margin-top:5px;letter-spacing:-.4px}
+.kpi .hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* Section */
+section{scroll-margin-top:20px;margin-bottom:42px}
+.section-head{display:flex;align-items:center;gap:12px;margin-bottom:15px;
+  padding-bottom:11px;border-bottom:2px solid var(--line)}
+.section-head .num{width:34px;height:34px;border-radius:9px;background:var(--primary);
+  color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0}
+.section-head h3{font-size:18px;font-weight:800;letter-spacing:-.3px}
+.tag{margin-left:auto;font-size:10.5px;font-weight:700;padding:4px 10px;
+  border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.tag.b2b{background:#dbeafe;color:#1e40af}
+.tag.premium{background:#ede9fe;color:#6d28d9}
+
+/* Card */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:19px 21px;margin-bottom:15px}
+.card h4{font-size:14.5px;font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.card h4 .ico{width:25px;height:25px;border-radius:7px;background:#eff6ff;
+  color:var(--primary2);display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0}
+
+/* Tools */
+.tools{display:flex;gap:9px;align-items:center;margin-bottom:11px;flex-wrap:wrap}
+.search{flex:1;min-width:170px;padding:9px 13px;border-radius:9px;border:1px solid var(--line);
+  font-family:inherit;font-size:13px;background:#f8fafc;transition:.15s}
+.search:focus{outline:none;border-color:var(--primary2);background:#fff;
+  box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.btn{padding:8px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;
+  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
+.btn:hover{background:#f1f5f9;color:var(--ink)}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff}
+thead th{background:#f8fafc;text-align:left;padding:10px 13px;font-weight:700;
+  font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#475569;
+  border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{background:#f1f5f9;color:var(--ink)}
+tbody td{padding:9px 13px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.price{font-weight:700;color:var(--ink)}
+.share{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;
+  font-weight:700;background:#f1f5f9;color:#475569;white-space:nowrap}
+.share.hi{background:#dcfce7;color:#166534}
+.share.mid{background:#fef3c7;color:#92400e}
+.share.lo{background:#f1f5f9;color:#64748b}
+
+/* Conclusion / Strategy */
+.conclusion{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);
+  border:1px solid #bae6fd;border-left:4px solid var(--primary2);
+  border-radius:10px;padding:13px 17px;margin-top:13px;font-size:13px}
+.conclusion strong{color:var(--primary);font-weight:700}
+.tag-price{display:inline-block;background:#fff;border:1px solid #bae6fd;
+  padding:2px 9px;border-radius:6px;font-weight:700;margin:0 2px}
+.strategy{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--accent);
+  border-radius:10px;padding:13px 17px;margin-top:9px;font-size:13px}
+.strategy strong{color:#92400e}
+
+/* Charts */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:17px 19px;box-shadow:var(--shadow)}
+.chart-card h4{font-size:13.5px;font-weight:700;margin-bottom:11px}
+.chart-card canvas{max-height:280px}
+
+/* Final table */
+.final-table td.product{font-weight:600}
+.final-table td.opt{color:var(--primary);font-weight:700}
+.final-table td.ret{color:var(--success);font-weight:700}
+
+/* Footer */
+footer{margin-top:55px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--muted);text-align:center}
+
+/* Mobile nav */
+@media(max-width:1024px){
+  .sidebar{position:static;height:auto;padding:16px}
+  .nav{flex-direction:row;flex-wrap:wrap;gap:3px}
+  .nav .gl{display:none}
+  .nav a{padding:6px 10px;font-size:11.5px}
+}
+
+/* Print */
+@media print{
+  .sidebar,.tools,.btn{display:none}
+  .app{display:block}
+  .card,.kpi{box-shadow:none;border:1px solid #ddd}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ================= SIDEBAR ================= -->
+<aside class="sidebar">
+  <h1>Анализ рынка ЛКМ</h1>
+  <div class="sub">Дашборд · 05.10.2026</div>
+  <nav class="nav">
+    <div class="gl">Обзор</div>
+    <a href="#overview"><span class="dot"></span>Рынок ЛКМ в России</a>
+    <a href="#kpis"><span class="dot"></span>Ключевые метрики</a>
+
+    <div class="gl">Часть 1 · B2B</div>
+    <a href="#p1-1"><span class="dot"></span>1.1 Краски ВД-АК</a>
+    <a href="#p1-2"><span class="dot"></span>1.2 Грунтовки</a>
+    <a href="#p1-3"><span class="dot"></span>1.3 Шпатлёвка</a>
+    <a href="#p1-4"><span class="dot"></span>1.4 Очистители</a>
+    <a href="#p1-5"><span class="dot"></span>1.5 Гидроизоляция</a>
+
+    <div class="gl">Часть 2 · Премиум</div>
+    <a href="#p2-1"><span class="dot"></span>2.1 Лак по камню</a>
+    <a href="#p2-2"><span class="dot"></span>2.2 Декоративная штукатурка</a>
+    <a href="#p2-3"><span class="dot"></span>2.3 Эпоксидные ЛКМ</a>
+    <a href="#p2-4"><span class="dot"></span>2.4 Премиум-краски</a>
+
+    <div class="gl">Итоги</div>
+    <a href="#final"><span class="dot"></span>Итоговая таблица цен</a>
+    <a href="#strategy"><span class="dot"></span>Стратегия продаж</a>
+    <a href="#conclusions"><span class="dot"></span>Выводы</a>
+  </nav>
+</aside>
+
+<!-- ================= MAIN ================= -->
+<main class="main">
+
+<div class="topbar">
+  <div>
+    <h2>Анализ конкурентов и рыночных цен</h2>
+    <p>Ассортимент ЛКМ · две стратегические группы · 100+ источников</p>
+  </div>
+  <span class="badge"><span class="pulse"></span>Данные на 05.10.2026</span>
+</div>
+
+<!-- KPI -->
+<div class="kpis" id="kpis">
+  <div class="kpi"><div class="label">Рынок ЛКМ РФ</div><div class="value">86%</div><div class="hint">доля российских производителей</div></div>
+  <div class="kpi g"><div class="label">Доля ВД-ЛКМ</div><div class="value">47%</div><div class="hint">водно-дисперсионные</div></div>
+  <div class="kpi o"><div class="label">Лидер грунтовок</div><div class="value">66%</div><div class="hint">Knauf + Ceresit</div></div>
+  <div class="kpi p"><div class="label">Премиум-краски</div><div class="value">13–18%</div><div class="hint">доля Tikkurila</div></div>
+  <div class="kpi"><div class="label">Загрузка мощностей</div><div class="value">50%</div><div class="hint">при 2,5 млн т/год</div></div>
+</div>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="section-head"><div class="num">§</div><h3>Общий контекст рынка ЛКМ в России</h3><span class="tag b2b">Обзор</span></div>
+  <div class="charts-grid">
+    <div class="chart-card"><h4>Структура рынка по типу покрытий</h4><canvas id="chartTypes"></canvas></div>
+    <div class="chart-card"><h4>Доли рынка ключевых производителей</h4><canvas id="chartProducers"></canvas></div>
+  </div>
+  <div class="card">
+    <h4><span class="ico">i</span>Ключевые факты</h4>
+    <ul style="margin-left:18px;font-size:13px;color:#334155;line-height:1.9">
+      <li>Производство ЛКМ в РФ сократилось на <strong>6,9%</strong>, потребление — на <strong>7,8%</strong>.</li>
+      <li>Российские производители занимают <strong>86% рынка</strong> — устойчивое импортозамещение.</li>
+      <li>Декоративные покрытия — <strong>56,2%</strong>, индустриальные — <strong>43,8%</strong>.</li>
+      <li>ВД-ЛКМ — <strong>47%</strong> продаж, органорастворимые — <strong>28%</strong>.</li>
+      <li>Загрузка мощностей — около <strong>50%</strong> при общих мощностях 2,5 млн тонн/год.</li>
+      <li>Топ-10 производителей: <strong>ABC Farben, Русские краски, Tikkurila, Лакра Синтез, Ярославские краски</strong>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 1.1 КРАСКИ ===== -->
+<section id="p1-1">
+  <div class="section-head"><div class="num">1.1</div><h3>Краски ВД-АК</h3><span class="tag b2b">B2B · Прямые продажи</span></div>
+  <div id="block-paints"></div>
+</section>
+
+<!-- ===== 1.2 ГРУНТОВКИ ===== -->
+<section id="p1-2">
+  <div class="section-head"><div class="num">1.2</div><h3>Грунтовки</h3><span class="tag b2b">B2B · Прямые продажи</span></div>
+  <div id="block-primers"></div>
+</section>
+
+<!-- ===== 1.3 ШПАТЛЁВКА ===== -->
+<section id="p1-3">
+  <div class="section-head"><div class="num">1.3</div><h3>Шпатлёвка финишная готовая</h3><span class="tag b2b">B2B · Прямые продажи</span></div>
+  <div id="block-putty"></div>
+</section>
+
+<!-- ===== 1.4 ОЧИСТИТЕЛИ ===== -->
+<section id="p1-4">
+  <div class="section-head"><div class="num">1.4</div><h3>Очистители от цемента и высолов</h3><span class="tag b2b">B2B · Прямые продажи</span></div>
+  <div id="block-cleaners"></div>
+</section>
+
+<!-- ===== 1.5 ГИДРОИЗОЛЯЦИЯ ===== -->
+<section id="p1-5">
+  <div class="section-head"><div class="num">1.5</div><h3>Гидроизоляция</h3><span class="tag b2b">B2B · Прямые продажи</span></div>
+  <div id="block-waterproof"></div>
+</section>
+
+<!-- ===== 2.1 ЛАК ПО КАМНЮ ===== -->
+<section id="p2-1">
+  <div class="section-head"><div class="num">2.1</div><h3>Лак акриловый по камню</h3><span class="tag premium">Премиум-ниша</span></div>
+  <div id="block-stonelac"></div>
+</section>
+
+<!-- ===== 2.2 ДЕКОРАТИВНАЯ ШТУКАТУРКА ===== -->
+<section id="p2-2">
+  <div class="section-head"><div class="num">2.2</div><h3>Декоративная штукатурка</h3><span class="tag premium">Премиум-ниша</span></div>
+  <div id="block-plaster"></div>
+</section>
+
+<!-- ===== 2.3 ЭПОКСИДНЫЕ ЛКМ ===== -->
+<section id="p2-3">
+  <div class="section-head"><div class="num">2.3</div><h3>Эпоксидные двухкомпонентные ЛКМ</h3><span class="tag premium">Премиум-ниша</span></div>
+  <div id="block-epoxy"></div>
+</section>
+
+<!-- ===== 2.4 ПРЕМИУМ-КРАСКИ ===== -->
+<section id="p2-4">
+  <div class="section-head"><div class="num">2.4</div><h3>Премиум интерьерная краска</h3><span class="tag premium">Премиум-ниша</span></div>
+  <div id="block-premiumpaint"></div>
+</section>
+
+<!-- ===== FINAL ===== -->
+<section id="final">
+  <div class="section-head"><div class="num">✓</div><h3>Итоговая таблица рекомендуемых цен</h3></div>
+  <div class="card final-table">
+    <div class="table-wrap">
+      <table id="tFinal">
+        <thead><tr><th>Продукт</th><th>Фасовка</th><th class="num">Оптовая цена</th><th class="num">Розничная цена</th></tr></thead>
+        <tbody>
+          <tr><td class="product">Грунтовка глубокого проникновения</td><td>10 кг</td><td class="num opt">1 000–1 200 ₽</td><td class="num ret">1 200–1 400 ₽</td></tr>
+          <tr><td class="product">Грунтовка «Базовая»</td><td>10 кг</td><td class="num opt">950 ₽</td><td class="num ret">1 200 ₽</td></tr>
+          <tr><td class="product">Грунтовка «Универсальная»</td><td>10 кг</td><td class="num opt">1 000–1 200 ₽</td><td class="num ret">1 200–1 400 ₽</td></tr>
+          <tr><td class="product">Грунтовка «Профи» / «Экстра»</td><td>10 кг</td><td class="num opt">1 200–1 500 ₽</td><td class="num ret">1 500–1 800 ₽</td></tr>
+          <tr><td class="product">Грунт-концентрат 1:4</td><td>10 кг</td><td class="num opt">1 500–2 000 ₽</td><td class="num ret">2 000–2 500 ₽</td></tr>
+          <tr><td class="product">Грунтовка «Бетон-Контакт»</td><td>15 кг</td><td class="num opt">1 200–1 500 ₽</td><td class="num ret">1 400–1 900 ₽</td></tr>
+          <tr><td class="product">Шпатлёвка финишная «Оптима»</td><td>20 кг</td><td class="num opt">1 000–1 300 ₽</td><td class="num ret">1 200–1 600 ₽</td></tr>
+          <tr><td class="product">Очиститель от цемента и высолов</td><td>1 л</td><td class="num opt">300–500 ₽</td><td class="num ret">400–600 ₽</td></tr>
+          <tr><td class="product">Мастика акриловая</td><td>7–10 кг</td><td class="num opt">1 000–1 400 ₽</td><td class="num ret">1 200–1 800 ₽</td></tr>
+          <tr><td class="product">Мастика акрил-битумная</td><td>1 кг</td><td class="num opt">350–450 ₽</td><td class="num ret">450–550 ₽</td></tr>
+          <tr><td class="product">Лак по камню</td><td>10 кг</td><td class="num opt">5 000–6 000 ₽</td><td class="num ret">6 000–8 000 ₽</td></tr>
+          <tr><td class="product">Декоративная штукатурка</td><td>25 кг</td><td class="num opt">1 500–2 500 ₽</td><td class="num ret">2 000–3 000 ₽</td></tr>
+          <tr><td class="product">Эпоксидный грунт</td><td>1 кг</td><td class="num opt">600–1 200 ₽</td><td class="num ret">800–1 500 ₽</td></tr>
+          <tr><td class="product">Премиум интерьерная краска</td><td>9 л</td><td class="num opt">6 000–9 000 ₽</td><td class="num ret">8 000–12 000 ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STRATEGY ===== -->
+<section id="strategy">
+  <div class="section-head"><div class="num">★</div><h3>Рекомендуемая стратегия продаж</h3></div>
+  <div class="card">
+    <h4><span class="ico">1</span>Позиционирование</h4>
+    <p style="font-size:13.5px;color:#334155">Нишевый B2B-производитель ЛКМ для строительных бригад и подрядчиков. Не конкурировать с крупными брендами по цене в эконом-сегменте. Занимать <strong>средний+ сегмент</strong>, где ценятся стабильное качество, быстрая поставка и техподдержка.</p>
+  </div>
+  <div class="card">
+    <h4><span class="ico">2</span>Продуктовая линейка</h4>
+    <p style="font-size:13.5px;color:#334155;margin-bottom:8px"><strong>Уровень 1 — «Рабочие лошадки» (60–70% выручки):</strong> грунтовки, шпатлёвки, моющиеся краски, мастики. Продукты регулярного спроса, формируют базу клиентов.</p>
+    <p style="font-size:13.5px;color:#334155"><strong>Уровень 2 — «Премиум-ниша» (30–40% выручки, 70%+ маржи):</strong> лак по камню, декоративная штукатурка, эпоксидные ЛКМ, премиум-краски. Наценка 150–200%.</p>
+  </div>
+  <div class="card">
+    <h4><span class="ico">3</span>Каналы сбыта (поэтапно)</h4>
+    <ol style="margin-left:18px;font-size:13.5px;color:#334155;line-height:1.9">
+      <li><strong>Прямые продажи строительным бригадам и подрядчикам</strong> (первые 3–6 мес). Собрать базу 100–150 бригад в радиусе 200 км. Звонить, предлагать решение под объект, давать пробные партии.</li>
+      <li><strong>Дилеры и строительные магазины</strong> (6–12 мес). Подключать после появления постоянных клиентов. Дилер получает цену ниже маркетплейсов на 15–20%, маржа — 50%.</li>
+      <li><strong>Маркетплейсы и B2B-площадки</strong> (12+ мес). Как витрина и канал для мелких заказов, не как основной источник выручки.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h4><span class="ico">4</span>Продвижение</h4>
+    <ul style="margin-left:18px;font-size:13.5px;color:#334155;line-height:1.9">
+      <li><strong>Пробные партии:</strong> 10–15 бригадам бесплатно, в обмен на отзыв и фото «до/после».</li>
+      <li><strong>Техподдержка:</strong> расчёт расхода, подбор состава под конкретное основание.</li>
+      <li><strong>Скрипт для звонков:</strong> «Мы производитель, поэтому цена ниже, чем у перекупщиков. Привезём на объект в течение 1–2 дней».</li>
+      <li><strong>Контент:</strong> короткие видео о том, как грунтовка укрепляет основание и снижает расход краски.</li>
+      <li><strong>Акцент на универсальность</strong> акриловых грунтовок — одна канистра решает большинство задач.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4><span class="ico">5</span>Ключевые принципы</h4>
+    <ul style="margin-left:18px;font-size:13.5px;color:#334155;line-height:1.9">
+      <li><strong>Не демпинговать.</strong> Продавать надёжно, быстро и по рыночной цене.</li>
+      <li><strong>Фокус на B2B.</strong> Строительные бригады — основной клиент на первом этапе.</li>
+      <li><strong>Двухуровневая линейка.</strong> «Рабочие лошадки» для объёма, премиум для маржи.</li>
+      <li><strong>Прямые продажи без посредников</strong> — главный источник маржи.</li>
+      <li><strong>Стабильность качества</strong> — основа повторных продаж.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== CONCLUSIONS ===== -->
+<section id="conclusions">
+  <div class="section-head"><div class="num">✓</div><h3>Ключевые выводы</h3></div>
+  <div class="card">
+    <ol style="margin-left:18px;font-size:13.5px;color:#334155;line-height:2">
+      <li><strong>Лидеры рынка ЛКМ в России:</strong> ТЕКС, Tikkurila, Лакра, Эмпилс, ABC Farben.</li>
+      <li><strong>Лидеры рынка грунтовок:</strong> Knauf и Ceresit (Lab Industries) — вместе 66% рынка водных грунтовок.</li>
+      <li><strong>Рынок декоративной штукатурки:</strong> Bergauf, Knauf, Волма, Perfekta, Ceresit.</li>
+      <li><strong>Рынок эпоксидных ЛКМ:</strong> Русские краски, Эмпилс, НПК ЯрЛИ, ВМП-Нева.</li>
+      <li><strong>Рынок премиум-красок:</strong> Tikkurila, AkzoNobel, Caparol, PARADE, MONS.</li>
+      <li><strong>Стратегия для вашего проекта:</strong> не конкурировать с Лакра и БЭЗ по цене в эконом-сегменте. Ваша ниша — <strong>средний+ сегмент</strong> (VGT, GERKULES, Основит) и <strong>премиум-ниша</strong> (Элакор, Три слона, DALI).</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  Дашборд подготовлен для внутреннего использования · Цены ориентировочные, могут отличаться по регионам и условиям поставки
+</footer>
+
+</main>
+</div>
+
+<script>
+/* ============================================================
+   ДАННЫЕ
+   ============================================================ */
+const DATA = {
+  paints: [
+    { t:"Краска фасадная база А белая (15 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-1180 Супербелая, база А",3148,"15 кг","209,87","lo","~2%"],
+        ["GERKULES","GL-88 база А",4933,"15 кг","328,87","lo","~1%"],
+        ["PERFEKTA","Фронтколор Стандарт база А",4380,"15 кг","292,00","lo","~1%"],
+        ["PROFILUX","База А акриловая матовая",2231,"15 кг","148,73","lo","<1%"],
+        ["Tikkurila","Facade Acrylate, база С",11449,"9 л","1 272,11","hi","13–18%"],
+        ["Лакра","Фасадная PROF IT, база А","—","3–25 кг","—","mid","~5%"],
+        ["БЭЗ (BEZ)","ВД-АК-203","724,16","15 кг","48,28","lo","<1%"],
+        ["FLAGMAN","ВД-АК-1031 премиальная","—","—","—","lo","<1%"],
+        ["ABC Farben","Ticiana Фасадная База А","—","2,5 л","—","mid","~5%"],
+        ["Старатели","Фасадная База А Супербелая","—","5 л","—","lo","~2%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>2 500–3 000 ₽</span> / розница — <span class='tag-price'>3 000–4 000 ₽</span> за 15 кг.",
+      strategy:"прямой B2B, пробные партии для бригад «под ключ», акцент на быструю поставку и техподдержку. Не воевать с Tikkurila по цене — выигрывать доступностью и скоростью."
+    },
+    { t:"Краска фасадная база С бесцветная (13–15 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-1180 фасадная база С",3261,"13 кг","250,85","lo","~2%"],
+        ["Лакра PROF IT","База С",3175,"13 кг","244,23","mid","~5%"],
+        ["Tikkurila","Facade Acrylate, база С",3927,"2,7 л","1 454,44","hi","13–18%"],
+        ["Tikkurila","Facade Acrylate, база С",11449,"9 л","1 272,11","hi","13–18%"],
+        ["Престиж","Фасадная латексная, база С",1423,"2,7 л","527,04","lo","~2%"],
+        ["BRITE","Professional всесезонная","—","9 л","—","lo","<1%"],
+        ["Farbitex (ABC Farben)","Акриловая фасадная","—","25 кг","—","mid","~5%"],
+        ["OLECOLOR (ABC Farben)","ВД-АК фасадная","—","14 кг","—","mid","~5%"],
+        ["Eskaro","AURA Fasad Expo","—","—","—","lo","~1%"],
+        ["Kraskovar","LUX FASADE","—","9 л","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>2 500–3 500 ₽</span> / розница — <span class='tag-price'>3 000–4 000 ₽</span>.",
+      strategy:"партнёрство с колеровочными центрами, бесплатная колеровка от 5 канистр, кастомизация цвета под объект."
+    },
+    { t:"Краска «Интерьерная» белая (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-2180 супербелая",730,"3 кг","243,33","lo","~2%"],
+        ["Permolit","Permoplast латексная 0P",1924,"10 кг","192,40","lo","<1%"],
+        ["Dyo","ICEBERG для стен и потолков",3814,"10 кг","381,40","lo","<1%"],
+        ["DESSA DECOR","Люкс А на белом мраморе",3872,"10 кг","387,20","lo","<1%"],
+        ["Brozex","ВД-АК интерьерная белая",699,"10 кг","69,90","lo","<1%"],
+        ["ПКФ АТОМ","ВАК-35-1 акриловая","от 190/кг","опт 25 кг","190,00","lo","<1%"],
+        ["БЭЗ (BEZ)","ВД-АК-202 интерьерная","64/кг","опт 1 кг","64,00","mid","~3%"],
+        ["Lakolux","ВД-АК-202 белая матовая","103/кг","опт","103,00","lo","<1%"],
+        ["Malare","ВД-АК для стен и потолков",1436,"—","—","lo","<1%"],
+        ["Престиж","ВД-АК Казачка (W-3)",246.50,"1,4 кг","176,07","lo","~2%"],
+        ["Olecolor (ABC Farben)","Интерьерная белая","—","—","—","mid","~5%"],
+        ["Dufa","Home Acrylic Matt","—","2,5 л","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 200–1 800 ₽</span> / розница — <span class='tag-price'>1 500–2 200 ₽</span>.",
+      strategy:"прямые продажи бригадам с акцентом на стабильность партии (один оттенок от канистры к канистре). Накопительные скидки постоянным клиентам."
+    },
+    { t:"Краска «Интерьерная» (база С) (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","Эмаль полуглянцевая база С",5857.16,"10 кг","585,72","lo","~2%"],
+        ["Мелат","Матовая база C прозрачная",1380.89,"10 кг","138,09","lo","<1%"],
+        ["Dyo","MASTERMAX SILIKONLU",2490.05,"10 кг","249,01","lo","<1%"],
+        ["Malina","ВД-АК-2180 W7 моющаяся",2575,"9 л","286,11","lo","<1%"],
+        ["Sinara","EcotonE моющаяся",645.15,"—","—","lo","<1%"],
+        ["Tikkurila","Facade Acrylate, база С",3927,"2,7 л","1 454,44","hi","13–18%"],
+        ["Престиж","Фасадная латексная",1423,"2,7 л","527,04","lo","~2%"],
+        ["Linnimax","Silikon SF",3801,"2,7 л","1 407,78","lo","<1%"],
+        ["Ореол (Эмпилс)","Интерьерная моющаяся","—","12,2 кг","—","mid","~9%"],
+        ["Farbitex Profi","Color-X влагостойкая","—","—","—","mid","~5%"],
+        ["Finch","Интерьерная Pro","—","—","—","lo","<1%"],
+        ["Hygge","Fleurs база C",9670,"4,5 л","2 148,89","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–2 000 ₽</span> / розница — <span class='tag-price'>1 800–2 500 ₽</span>.",
+      strategy:"фокус на дизайнерские объекты, сотрудничество с колеровочными студиями, обучение мастеров."
+    },
+    { t:"Краска «Для детской» белая База А (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","IQ129 для детских комнат",387,"0,8 л","483,75","lo","~2%"],
+        ["ТЕКС","Профи для детской и спальни",625,"1,8 л","347,22","hi","~11%"],
+        ["KOMANDOR","Interior Kids&Bedroom",2362,"2,7 л","874,81","lo","<1%"],
+        ["Parade","PlayPaint",147,"0,25 л","588,00","mid","~5%"],
+        ["FINNCOLOR","OASIS KIDS&BEDROOM",715,"0,9 л","794,44","lo","<1%"],
+        ["Luxens","База А для детской","—","5 л","—","lo","<1%"],
+        ["Радуга","ВД-АК 220 Colors",850,"0,9 л","944,44","lo","<1%"],
+        ["БЭЗ (BEZ)","ВД-АК-236 для мед. и детских","68/кг","опт","68,00","mid","~3%"],
+        ["Malare","ВД-АК ГОСТ","от 655","—","—","lo","<1%"],
+        ["Престиж","ВД-АК Казачка (W-3)",246.50,"1,4 кг","176,07","lo","~2%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–2 000 ₽</span> / розница — <span class='tag-price'>1 800–2 500 ₽</span>.",
+      strategy:"тендеры и прямые договоры с детсадами, школами, больницами. Плюс маркетплейсы для родителей. Ключевой аргумент — экологичность и сертификаты."
+    },
+    { t:"Краска «Для детской» База С (10 кг)",
+      rows:[
+        ["Tikkurila","Harmony прозрачная база С",2546,"2,7 л","942,96","hi","13–18%"],
+        ["Husky","Для детских комнат моющаяся",1785,"5 л","357,00","lo","<1%"],
+        ["Tikkurila","Perfecta матовая прозрачная",4208,"2,7 л","1 558,52","hi","13–18%"],
+        ["VGT (ВГТ)","ВД-АК-1179 эмаль для детских",5750,"10 кг","575,00","lo","~2%"],
+        ["Malina","ВД-АК-2180 W7 моющаяся",2575,"9 л","286,11","lo","<1%"],
+        ["Tikkurila","Facade Acrylate, база С",3927,"2,7 л","1 454,44","hi","13–18%"],
+        ["Престиж","Фасадная латексная",1423,"2,7 л","527,04","lo","~2%"],
+        ["Linnimax","Silikon SF",3801,"2,7 л","1 407,78","lo","<1%"],
+        ["Brite","Professional глубокоматовая","—","9 л","—","lo","<1%"],
+        ["Основит","УНИВИТА Studio Lusso III",3666,"9 л","407,33","lo","~1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>2 000–3 000 ₽</span> / розница — <span class='tag-price'>2 500–3 500 ₽</span>.",
+      strategy:"премиум-сегмент, сертификация для госучреждений, участие в тендерах образовательных учреждений."
+    },
+    { t:"Краска «МОЮЩАЯСЯ» белая База А (10 кг)",
+      rows:[
+        ["Лакра (РУФА)","ВД АК моющаяся",1950,"10 кг","195,00","mid","~5%"],
+        ["VGT (ВГТ)","ВД-АК-1180 моющаяся",3335.72,"13 кг","256,59","lo","~2%"],
+        ["Movatex","Для потолков супербелая",3180,"10 кг","318,00","lo","<1%"],
+        ["Fresko","Interior белая моющаяся","—","10 кг","—","lo","<1%"],
+        ["ARIDAL","i4 моющаяся База А","—","7 кг","—","lo","<1%"],
+        ["БЭЗ (BEZ)","ВД-АК-202 моющаяся",790.94,"15 кг","52,73","mid","~3%"],
+        ["Malina","ВД-АК-2180 W7 моющаяся",2575,"9 л","286,11","lo","<1%"],
+        ["Sinara","EcotonE моющаяся",645.15,"—","—","lo","<1%"],
+        ["Farbitex (ABC Farben)","Моющаяся","—","3 кг","—","mid","~5%"],
+        ["КВИЛ","White Line для влажных","—","7 кг","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–1 800 ₽</span> / розница — <span class='tag-price'>2 000–2 400 ₽</span>.",
+      strategy:"работа с УК и ЖКХ (подъезды, лестничные клетки), клининговые компании. Аргумент — стойкость к мытью."
+    },
+    { t:"Краска «МОЮЩАЯСЯ» База С (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-1180 моющаяся, база С",1862,"6 кг","310,33","lo","~2%"],
+        ["Радуга-210","Акриловая база С моющаяся","—","10 кг","—","lo","<1%"],
+        ["Актерм","АкваМет База С под колеровку",3360,"10 кг","336,00","lo","<1%"],
+        ["Malina","ВД-АК-2180 W7 моющаяся",2575,"9 л","286,11","lo","<1%"],
+        ["Sinara","EcotonE моющаяся",645.15,"—","—","lo","<1%"],
+        ["Tikkurila","Facade Acrylate, база С",3927,"2,7 л","1 454,44","hi","13–18%"],
+        ["Престиж","Фасадная латексная",1423,"2,7 л","527,04","lo","~2%"],
+        ["Лакра","Моющаяся база С","—","—","—","mid","~5%"],
+        ["Базис","Латексная моющаяся","—","1,5–14 кг","—","lo","<1%"],
+        ["Dekoral","Моющаяся база С","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–2 000 ₽</span> / розница — <span class='tag-price'>1 800–2 500 ₽</span>.",
+      strategy:"нишевый продукт для медицинских и пищевых объектов. Прямые поставки с техсопровождением, акцент на санитарные нормы."
+    },
+    { t:"Краска «Для потолков» белая (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-2180 для потолков",263,"1,5 кг","175,33","lo","~2%"],
+        ["Terraco","Ceiling Paint для потолка",1879,"10 кг","187,90","lo","<1%"],
+        ["Permolit","Permomax для потолка",2486,"10 кг","248,60","lo","<1%"],
+        ["Dyo","ICEBERG акриловая матовая",3699,"10 кг","369,90","lo","<1%"],
+        ["Sobtavan","Потолочная краска",859,"10 кг","85,90","lo","<1%"],
+        ["Красковия","Люксорит Мастер 20 3 в 1","—","10 кг","—","lo","<1%"],
+        ["БЭЗ (BEZ)","ВД-АК-203",724.16,"15 кг","48,28","mid","~3%"],
+        ["Malare","ВД-АК для потолка, ГОСТ","от 385","—","—","lo","<1%"],
+        ["Zlata","ВД-АК для стен и потолков",1324.50,"13 кг","101,88","lo","<1%"],
+        ["Lakolux","ВД-АК-202 белая матовая","103/кг","опт","103,00","lo","<1%"],
+        ["КВИЛ","White Line для потолков","—","1,3 кг","—","lo","<1%"],
+        ["ДИОЛА","Королева потолков","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 000–1 500 ₽</span> / розница — <span class='tag-price'>1 200–1 800 ₽</span>.",
+      strategy:"самый массовый и ценочувствительный сегмент. Минимальная цена при стабильном качестве. Оптовые скидки от 20 канистр."
+    }
+  ],
+
+  primers: [
+    { t:"Грунтовка глубокого проникновения (10 кг)",
+      rows:[
+        ["Ceresit","CT 17 PRO",949.20,"10 кг","94,92","hi","12–13%"],
+        ["GLIMS","Deep Prime",925,"10 кг","92,50","lo","~2%"],
+        ["GERKULES","GE-129 PRO (концентрат 1:4)",4471,"10 кг","447,10","lo","~1%"],
+        ["РОКВУЛ (ROCKforce)","Грунтовка глубокого проникновения",4469.16,"10 кг","446,92","lo","<1%"],
+        ["PLITONIT","Грунт глубокого проникновения",1300,"10 л","130,00","lo","~2%"],
+        ["MASTER FARBE","Грунт глубокого проникновения",783,"10 кг","78,30","lo","<1%"],
+        ["Litokol","Primer C-m",1150,"5 кг","230,00","lo","<1%"],
+        ["Bitex","Tiefgrund LF Konzentrat 1:4","~1 200","10 л","~120,00","lo","<1%"],
+        ["Лакра","Грунтовка глубокого проникновения",820,"10 кг","82,00","mid","~5%"],
+        ["Knauf","Тифенгрунд",1170,"10 кг","117,00","hi","12–13%"],
+        ["DeRock","DG-10","—","—","—","lo","<1%"],
+        ["quick-mix","ATG","—","—","—","lo","<1%"],
+        ["ЭМЛАК","Грунтовка глубокого проникновения","—","—","—","lo","<1%"],
+        ["ДЕКАРТ (ЭКСПЕРТ)","Грунтовка ЭКСПЕРТ","—","10 кг","—","lo","<1%"],
+        ["Котласский химзавод","WD-01, WD-02, WD-03","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 000–1 200 ₽</span> / розница — <span class='tag-price'>1 200–1 400 ₽</span>.",
+      strategy:"рынок доминируется Ceresit и Knauf (66%), но они проигрывают по цене. Прямые продажи бригадам с ценой на 15–20% ниже брендов. Не демпинговать ниже 900 ₽."
+    },
+    { t:"Грунтовка акриловая «Базовая» (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-0301",1132.97,"10 кг","113,30","lo","~2%"],
+        ["Лакра PROF IT","Грунт акриловый универсальный",1216.67,"10 кг","121,67","mid","~5%"],
+        ["Норма (Дмитров-Дело)","Акриловая грунтовка универсальная",891.60,"10 кг","89,16","lo","<1%"],
+        ["ОРЕОЛ","Универсальная с антисептиком",1400,"10 кг","140,00","mid","~9%"],
+        ["BASIS (Базис)","Универсальная акриловая",433.75,"10 л","43,38","lo","<1%"],
+        ["Gunstig","Грунтовка глубокого проникновения",266.25,"10 л","26,63","lo","<1%"],
+        ["FARBITEX","Грунтовка глубокого проникновения профи",801,"10 кг","80,10","mid","~5%"],
+        ["Luxorit","Грунт акриловый для стен и потолков","70/кг","10 кг","70,00","lo","<1%"],
+        ["Эмпилс","Грунтовка с антисептиком","—","—","—","mid","~9%"],
+        ["Baumit","MultiPrimer, Grund","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>950 ₽</span> / розница — <span class='tag-price'>1 200 ₽</span>.",
+      strategy:"универсальный продукт. Позиционирование «одна канистра для всего». Работа с бригадами, которые ценят универсальность. Комплекты (грунтовка + краска) со скидкой."
+    },
+    { t:"Грунтовка акриловая «Универсальная» (10 кг)",
+      rows:[
+        ["Ceresit","CT 17 PRO",949,"10 кг","94,90","hi","12–13%"],
+        ["VGT (ВГТ)","ВД-АК-0301",1133,"10 кг","113,30","lo","~2%"],
+        ["GLIMS","Deep Prime",925,"10 кг","92,50","lo","~2%"],
+        ["Лакра","Грунтовка универсальная",640,"10 кг","64,00","mid","~5%"],
+        ["Knauf","Тифенгрунд",1170,"10 кг","117,00","hi","12–13%"],
+        ["Основит","ДИПКОНТ LP53",1079,"10 кг","107,90","lo","~1%"],
+        ["Эксперт","ВД-АК-0181 акриловая универсальная",1240,"10 кг","124,00","lo","<1%"],
+        ["PaintGuard","Грунтовка универсальная",632,"10 л","63,20","lo","<1%"],
+        ["Ударник","ВД-АК-01НВУ универсальная",341,"10 л","34,10","lo","<1%"],
+        ["Bitex","Tiefgrund LF Konzentrat 1:4",1200,"10 л","120,00","lo","<1%"],
+        ["УЗЛИ","Грунтовка акриловая универсальная","—","10 кг","—","lo","<1%"],
+        ["Руслюкс","Акриловые грунтовки","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 000–1 200 ₽</span> / розница — <span class='tag-price'>1 200–1 400 ₽</span>.",
+      strategy:"массовый спрос. Работа с широкой аудиторией бригад через прямые продажи и дилеров. Ключевой аргумент — соотношение цена/качество."
+    },
+    { t:"Грунтовка акриловая «Профи» / «Экстра» (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-0301 грунтовка фасадная",1726,"10 кг","172,60","lo","~2%"],
+        ["Лакра PROF IT","Грунт адгезионный Экстра Кварц",2946,"14 кг","210,43","mid","~5%"],
+        ["FARBITEX","Грунтовка глубокого проникновения профи",1356,"10 кг","135,60","mid","~5%"],
+        ["Эксперт","ВД-АК-0181",1240,"10 кг","124,00","lo","<1%"],
+        ["Ceresit","CT 17 PRO",949,"10 кг","94,90","hi","12–13%"],
+        ["Knauf","Тифенгрунд",1170,"10 кг","117,00","hi","12–13%"],
+        ["Основит","ДИПКОНТ LP53",1079,"10 кг","107,90","lo","~1%"],
+        ["GLIMS","Deep Prime",925,"10 кг","92,50","lo","~2%"],
+        ["Bitex","Tiefgrund LF Konzentrat 1:4",1200,"10 л","120,00","lo","<1%"],
+        ["Лакра","Грунтовка акриловая",640,"10 кг","64,00","mid","~5%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 200–1 500 ₽</span> / розница — <span class='tag-price'>1 500–1 800 ₽</span>.",
+      strategy:"профессиональный продукт для бригад, работающих на сложных объектах. Ключевой аргумент — усиленная адгезия и долговечность."
+    },
+    { t:"Грунт акриловый «Концентрат» 1:4 (10 кг)",
+      rows:[
+        ["VGT (ВГТ)","ВД-АК-0301",1133,"10 кг","113,30","lo","~2%"],
+        ["GERKULES","GE-129 PRO (концентрат 1:4)",4471,"10 кг","447,10","lo","~1%"],
+        ["Bitex","Tiefgrund LF Konzentrat 1:4",1200,"10 л","120,00","lo","<1%"],
+        ["OZON","ВД-АК 016 концентрат акриловый",1100,"1 кг","1 100,00","lo","<1%"],
+        ["FLAGMAN","ВД-АК-011 бесцветная концентрат",2158,"10 л","215,80","lo","<1%"],
+        ["Лакра","Грунт-концентрат акриловый",640,"10 кг","64,00","mid","~5%"],
+        ["Ceresit","CT 17 PRO",949,"10 кг","94,90","hi","12–13%"],
+        ["Knauf","Тифенгрунд",1170,"10 кг","117,00","hi","12–13%"],
+        ["Основит","ДИПКОНТ LP53",1079,"10 кг","107,90","lo","~1%"],
+        ["GLIMS","Deep Prime",925,"10 кг","92,50","lo","~2%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–2 000 ₽</span> / розница — <span class='tag-price'>2 000–2 500 ₽</span>.",
+      strategy:"экономичный продукт для профессионалов. Аргумент — одна канистра = 4 канистры готовой грунтовки. Работа с крупными объектами."
+    },
+    { t:"Грунтовка «Бетон-Контакт» (15 кг)",
+      rows:[
+        ["Ceresit","CT 19 Бетонконтакт",2600,"15 кг","173,33","hi","12–13%"],
+        ["Ceresit","CT 19 (опт)",2176,"15 кг","145,07","hi","12–13%"],
+        ["Пирамида","ВД-ДР 01-07 Стандарт",1548,"15 кг","103,20","lo","<1%"],
+        ["Archin","Бетонконтакт",1440,"15 кг","96,00","lo","<1%"],
+        ["Samix","Бетонконтакт",1053,"15 кг","70,20","lo","<1%"],
+        ["Крепс","Всесезонная",1350,"15 кг","90,00","lo","<1%"],
+        ["Plitonit","Бетоноконтакт",2239,"15 кг","149,27","lo","~2%"],
+        ["ЛИТОКС","Бетоноконтакт",1746,"15 кг","116,40","lo","<1%"],
+        ["FARBITEX","Профи бетоноконтакт",587.60,"3,5 кг","167,89","mid","~5%"],
+        ["Optimix","Бетон-контакт всесезонная",1880,"20 кг","94,00","lo","<1%"],
+        ["СО-ЕДИНЕНИЕ","ВД-СО-1 с индикатором","—","—","—","lo","<1%"],
+        ["Геркулес","GE-99 сухой","—","10 кг","—","lo","~1%"],
+        ["LINE COLOR","Бетонконтакт с кварцем","—","15 кг","—","lo","<1%"],
+        ["Cover Color","Бетоноконтакт","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 200–1 500 ₽</span> / розница — <span class='tag-price'>1 400–1 900 ₽</span>.",
+      strategy:"специализированный продукт для гладких оснований. Прямые продажи бригадам, работающим с бетоном. Технические консультации."
+    }
+  ],
+
+  putty: [
+    { t:"Шпатлёвка финишная готовая «Оптима» (20 кг)",
+      rows:[
+        ["Weber-Vetonit","LR Pasta",757,"20 кг","37,85","mid","~5%"],
+        ["Weber-Vetonit","LR+",1079,"20 кг","53,95","mid","~5%"],
+        ["Weber-Vetonit","LR Pasta (розница)",975,"20 кг","48,75","mid","~5%"],
+        ["JetBau","Суперфиниш",575,"20 кг","28,75","lo","<1%"],
+        ["Optimix","OPT LR+",346,"20 кг","17,30","lo","<1%"],
+        ["GLIMS","Optimum универсальная",462,"20 кг","23,10","lo","~2%"],
+        ["Vetonit","KR Шпаклевка финишная",573,"20 кг","28,65","mid","~5%"],
+        ["Knauf","Polymer Finish","—","20 кг","—","hi","25–30%"],
+        ["ТЕКС","Профи Финишная",679,"5 кг","135,80","hi","~11%"],
+        ["Bergauf","Uni Pasta",2200,"25 кг","88,00","lo","~2%"],
+        ["ВОЛМА","VOLMA-Cream","—","—","—","mid","~5%"],
+        ["Старатели","Финишная","—","—","—","lo","~2%"],
+        ["ОСНОВИТ","ЭКОНСИЛК PP38 W","—","—","—","lo","~1%"],
+        ["КРЕПС-Урал","FINISH Gips, LR","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 000–1 300 ₽</span> / розница — <span class='tag-price'>1 200–1 600 ₽</span>.",
+      strategy:"высококонкурентный сегмент с доминированием Knauf и Weber-Vetonit. Прямые продажи бригадам с акцентом на готовность к применению. Аргумент — экономия времени мастера."
+    }
+  ],
+
+  cleaners: [
+    { t:"Очиститель от цемента и высолов (1 л / 5 л / 20 кг)",
+      rows:[
+        ["Pro-brite","161-1 Salt Stone",439,"1 л","439,00","lo","<1%"],
+        ["ТИПРОМ ПЛЮС","Очиститель фасадов",329,"1 л","329,00","lo","<1%"],
+        ["АрмМикс","Очиститель от цементного молочка",4000,"—","—","lo","<1%"],
+        ["Антисолекс","Средство для очистки от высолов",12450,"20 кг","622,50","lo","<1%"],
+        ["Сэйфскрин","SAd1",1141,"5 л","228,20","lo","<1%"],
+        ["Lithofin","Средство для очистки",4260,"1 л","4 260,00","lo","<1%"],
+        ["ТИПРОМ","Очиститель фасадов",331,"1 л","331,00","lo","<1%"],
+        ["ТИПРОМ","Очиститель (опт)",327,"1 л","327,00","lo","<1%"],
+        ["DOCKER","DOCKER ZEMENT","—","—","—","lo","<1%"],
+        ["Просепт","PROSEPT CEMENT CLEANER","—","—","—","lo","<1%"],
+        ["ЭкоТехнологии","GoodHim 600","—","5 л","—","lo","<1%"],
+        ["БК B&B","Unicum","—","1 л","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>300–500 ₽/л</span> / розница — <span class='tag-price'>400–600 ₽/л</span>.",
+      strategy:"нишевый продукт с низкой конкуренцией. Прямые продажи бригадам, работающим с фасадами и плиткой. Комплекты (очиститель + грунтовка) для фасадных работ."
+    }
+  ],
+
+  waterproof: [
+    { t:"Мастика акриловая гидроизоляционная (7–10 кг)",
+      rows:[
+        ["КМ-22","Мастика акриловая быстросохнущая",1990,"7 кг","284,29","lo","<1%"],
+        ["Bergauf","Hydro-Tec Membrane",3008,"7 кг","429,71","lo","~2%"],
+        ["Terraco","Flexicoat Maxi",1418,"3 кг","472,67","lo","<1%"],
+        ["DALI","Aquaplast универсальная",3035,"5 л","607,00","lo","<1%"],
+        ["АКТЕРМ","Гидростоп",1650,"5 кг","330,00","lo","<1%"],
+        ["DALI","Aquaplast",1829,"2,5 л","731,60","lo","<1%"],
+        ["Гидростоп Cover","Акриловая мастика",1100,"10 кг","110,00","lo","<1%"],
+        ["Bitumstroy","Акриловая гидроизоляционная",2170,"20 кг","108,50","lo","<1%"],
+        ["Рогнеда","Мастика универсальная акриловая",1869.50,"—","—","lo","~1%"],
+        ["Terraco","Flexicoat",10808,"20 кг","540,40","lo","<1%"],
+        ["Liquipol","Гидроизоляционные мастики","—","—","—","lo","<1%"],
+        ["Гепол","Акриловый герметик","—","—","—","lo","<1%"],
+        ["JetBau","ГИДРОИЗОЛ","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 000–1 400 ₽</span> / розница — <span class='tag-price'>1 200–1 800 ₽</span> за 7–10 кг.",
+      strategy:"продукт для санузлов и ванных комнат. Прямые продажи бригадам, работающим с плиткой. Комплекты (мастика + плиточный клей) со скидкой."
+    },
+    { t:"Мастика «АКРИЛ-БИТУМНАЯ» (1 кг / 5 кг)",
+      rows:[
+        ["Поли-Р","Мастика акрил-битумная",459,"1 кг","459,00","lo","<1%"],
+        ["Поли-Р","Мастика акрил-битумная",448,"1 кг","448,00","lo","<1%"],
+        ["Поли-Р","Акрил-битумная мастика",529,"1 кг","529,00","lo","<1%"],
+        ["Поли-Р","Мастика акрил-битумная 5 кг",1931,"5 кг","386,20","lo","<1%"],
+        ["Поли-Р","Мастика акрил-битумная",430,"1 кг","430,00","lo","<1%"],
+        ["БИТУМ ПРОДУКТ","Мастика акриловая гидроизоляционная",1636,"5 кг","327,20","lo","<1%"],
+        ["АкваМаст","Мастика битумная","—","—","—","lo","<1%"],
+        ["БИТУМАСТ","Акриловая гидроизоляция","—","1,3 кг","—","lo","<1%"],
+        ["Bitumstroy","Акриловая гидроизоляционная",2170,"20 кг","108,50","lo","<1%"],
+        ["Технониколь","Мастика №24 МГТН",4906,"20 кг","245,30","lo","~3%"],
+        ["ECOMAST","Битумная и полимерная гидроизоляция","—","—","—","lo","<1%"],
+        ["Грида","ГидроМЭБ-Акрил","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>350–450 ₽/кг</span> / розница — <span class='tag-price'>450–550 ₽/кг</span>.",
+      strategy:"продукт для фундаментов и кровли. Прямые продажи строительным компаниям. Аргумент — сочетание эластичности акрила и водонепроницаемости битума."
+    }
+  ],
+
+  stonelac: [
+    { t:"Лак акриловый по камню (10 кг)",
+      rows:[
+        ["Элакор-ПУ","Лак для камня и кирпича",5835,"10 кг","583,50","lo","<1%"],
+        ["Три слона","Лак универсальный акриловый",6469,"10 кг","646,90","lo","<1%"],
+        ["ELCON Weston","Лак по камню",9820.73,"10,8 кг / 9 л","909,33","lo","<1%"],
+        ["PARADE","L40 Камень и кирпич",10055.59,"10 л","1 005,56","mid","~5%"],
+        ["DALI","Лак для камня «Мокрый камень»",932,"1 л","932,00","lo","~1%"],
+        ["PROSEPT","Лак для камня",869.76,"2 л","434,88","lo","<1%"],
+        ["NEOMID","Stone лак",4580,"5 л","916,00","lo","<1%"],
+        ["DERUFA","Лак для камня","от 1 530/л","5–10 л","1 530,00","lo","<1%"],
+        ["POLIMIX","Лак по камню, матовый","1 800–4 250","1–3 л","—","lo","<1%"],
+        ["AQUA WELL","Лак акриловый для камня",354,"1 кг","354,00","lo","<1%"],
+        ["ZERWOOD","LK по камню",802.80,"2,5 кг","321,12","lo","<1%"],
+        ["FAKTURA","Лак для камня","—","0,9 л","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>5 000–6 000 ₽</span> / розница — <span class='tag-price'>6 000–8 000 ₽</span> за 10 кг.",
+      strategy:"премиальный продукт с высокой маржой. Позиционирование как профессиональное решение для декоративной отделки фасадов. Работа с дизайнерами и архитекторами."
+    }
+  ],
+
+  plaster: [
+    { t:"Декоративная штукатурка (25 кг)",
+      rows:[
+        ["VGT (ВГТ)","Фактурная декоративная силиконизированная","—","—","—","lo","~2%"],
+        ["Ceresit","CT 64 «Короед»",4100,"25 кг","164,00","hi","12–13%"],
+        ["Baumit","GranoporTop 2.0",14066,"25 кг","562,64","lo","<1%"],
+        ["ОСНОВИТ","ЭКСТЕРВЭЛЛ OAc-2.0 WK",4126,"25 кг","165,04","lo","~1%"],
+        ["PARADE","SILIKON Reibeputz S230",4773.20,"15 кг","318,21","mid","~5%"],
+        ["Лакра PROF IT","Роллерная «Короед»",4310,"25 кг","172,40","mid","~5%"],
+        ["Bergauf","Dekor Pasta силикатно-силиконовая",3540,"25 кг","141,60","lo","~2%"],
+        ["GERKULES","GD-21 «Шуба»",1426,"25 кг","57,04","lo","~1%"],
+        ["Vossmes","Шуба",900,"25 кг","36,00","lo","<1%"],
+        ["Bitex","Reibeputz «Короед»",520,"25 кг","20,80","lo","<1%"],
+        ["SILK PLASTER","Декоративные штукатурки","—","—","—","lo","<1%"],
+        ["Italica","Декоративные покрытия","—","—","—","lo","<1%"],
+        ["CROST","Декоративные штукатурки","—","—","—","lo","<1%"],
+        ["НевоСтрой","Декоративные штукатурки","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>1 500–2 500 ₽</span> / розница — <span class='tag-price'>2 000–3 000 ₽</span> за 25 кг.",
+      strategy:"продукт для дизайнерских объектов. Партнёрство с дизайнерами и архитекторами. Аргумент — разнообразие фактур и кастомизация. Обучение для мастеров."
+    }
+  ],
+
+  epoxy: [
+    { t:"Эпоксидные двухкомпонентные ЛКМ (1 кг)",
+      rows:[
+        ["Элакор-ЭД","Грунт-2К/100",11020,"14,5 кг","760,00","lo","<1%"],
+        ["Элакор-ЭД","Грунт-2К/60",7425,"12,5 кг","594,00","lo","<1%"],
+        ["Экотермикс","МОНЕ 801",680,"1 кг","680,00","lo","<1%"],
+        ["ИНДОСИНГЛ ЭП","Грунт-эмаль эпоксидная",2317.40,"1 кг + 0,16 л","2 317,40","lo","<1%"],
+        ["VIKA","ЭП-0228","584,25–615","1 кг","584,25","lo","<1%"],
+        ["Основит","ИНДАСТРО ЛЕВЕЛАЙН FE850 (А)",24570,"16 кг","1 535,63","lo","~1%"],
+        ["Основит","ИНДАСТРО ЛЕВЕЛАЙН LE 2k/100 (Б)",32771,"7 кг","4 681,57","lo","~1%"],
+        ["Инелка","NEOMARINE INELKA EPOXY",1250,"20 кг","62,50","lo","<1%"],
+        ["Malare","TITAN эпоксидный лак",1436,"—","—","lo","<1%"],
+        ["Цинконит","ЭП 2К",19214,"—","—","lo","<1%"],
+        ["PentriMAX","Эпоксидные грунты","—","—","—","lo","<1%"],
+        ["Спектр-ТП","Gardopoxy Zink","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>600–1 200 ₽/кг</span> / розница — <span class='tag-price'>800–1 500 ₽/кг</span>.",
+      strategy:"промышленный сегмент. Прямые продажи промышленным предприятиям и строительным компаниям, работающим с бетонными полами. Техническое сопровождение проектов."
+    }
+  ],
+
+  premiumpaint: [
+    { t:"Премиум интерьерная краска (9 л)",
+      rows:[
+        ["LINNIMAX (Caparol)","WUNDERCLEAN",23290,"9 л","2 587,78","lo","~2%"],
+        ["PARADE","DELUXE BRILLIANT PERF.",9314,"9 л","1 034,89","mid","~5%"],
+        ["PARADE","DELUXE BRILLIANT SILKY SHINE",15402.70,"9 л","1 711,41","mid","~5%"],
+        ["MONS","PREMIUM PAINT",20300,"5 л","4 060,00","lo","<1%"],
+        ["Dulux","Professional DIAMOND Extra Matt",9435,"4,5 л","2 096,67","mid","~5%"],
+        ["Tikkurila","Harmony Velure","16 799–18 599","9 л","1 866,56–2 066,56","hi","13–18%"],
+        ["INTERIOR LUXE","База А",5070,"9 л","563,33","lo","<1%"],
+        ["Luxium (AkzoNobel)","Professional Bindo Expert",5948,"9 л","660,89","mid","~5%"],
+        ["Dufa","Premium ВД KeraLine 3",578,"0,9 л","642,22","lo","<1%"],
+        ["Лоймина ПРО","Charmant","—","—","—","lo","<1%"],
+        ["K&G KAMENEVGROUP","Премиальные краски","—","—","—","lo","<1%"],
+        ["Aeterna (Manders)","Премиальные интерьерные краски","—","—","—","lo","<1%"],
+        ["Lanors","MONS","—","—","—","lo","<1%"],
+        ["Italica","Премиальные краски","—","—","—","lo","<1%"]
+      ],
+      conclusion:"опт — <span class='tag-price'>6 000–9 000 ₽</span> / розница — <span class='tag-price'>8 000–12 000 ₽</span> за 9 л.",
+      strategy:"сегмент с высокой маржой. Позиционирование как альтернатива импортным брендам. Работа с дизайнерами и архитекторами. Аргумент — качество на уровне Tikkurila при цене на 20–30% ниже."
+    }
+  ]
+};
+
+/* ============================================================
+   РЕНДЕР
+   ============================================================ */
+function shareClass(c){ return c; }
+
+function renderBlock(containerId, items){
+  const container = document.getElementById(containerId);
+  let html = '';
+  items.forEach((item, idx) => {
+    const tableId = 'tbl_' + containerId + '_' + idx;
+    let rows = '';
+    item.rows.forEach((r, i) => {
+      rows += `<tr>
+        <td>${i+1}</td>
+        <td>${r[0]}</td>
+        <td>${r[1]}</td>
+        <td class="num price">${r[2]}</td>
+        <td>${r[3]}</td>
+        <td class="num">${r[4]}</td>
+        <td><span class="share ${r[5]}">${r[6]}</span></td>
+      </tr>`;
+    });
+    html += `
+      <div class="card">
+        <h4><span class="ico">${idx+1}</span>${item.t}</h4>
+        <div class="tools">
+          <input class="search" data-table="${tableId}" placeholder="🔍 Поиск по производителю или продукту…">
+          <button class="btn" onclick="exportCSV('${tableId}','${item.t.replace(/'/g,"")}')">Экспорт CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table id="${tableId}">
+            <thead><tr>
+              <th>№</th><th>Производитель / Бренд</th><th>Продукт</th>
+              <th class="num">Цена, ₽</th><th>Фасовка</th><th class="num">₽/кг·л</th><th>Доля рынка</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="conclusion"><strong>Рекомендуемая цена:</strong> ${item.conclusion}</div>
+        <div class="strategy"><strong>Стратегия входа:</strong> ${item.strategy}</div>
+      </div>`;
+  });
+  container.innerHTML = html;
+}
+
+renderBlock('block-paints', DATA.paints);
+renderBlock('block-primers', DATA.primers);
+renderBlock('block-putty', DATA.putty);
+renderBlock('block-cleaners', DATA.cleaners);
+renderBlock('block-waterproof', DATA.waterproof);
+renderBlock('block-stonelac', DATA.stonelac);
+renderBlock('block-plaster', DATA.plaster);
+renderBlock('block-epoxy', DATA.epoxy);
+renderBlock('block-premiumpaint', DATA.premiumpaint);
+
+/* ============================================================
+   ПОИСК И ЭКСПОРТ
+   ============================================================ */
+document.addEventListener('input', e => {
+  if (!e.target.classList.contains('search')) return;
+  const q = e.target.value.toLowerCase().trim();
+  const table = document.getElementById(e.target.dataset.table);
+  if (!table) return;
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+
+function exportCSV(tableId, name){
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const rows = [];
+  table.querySelectorAll('tr').forEach(tr => {
+    const cells = [...tr.querySelectorAll('th,td')].map(c => '"' + c.textContent.replace(/"/g,'""').trim() + '"');
+    rows.push(cells.join(','));
+  });
+  const csv = '\ufeff' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.csv';
+  a.click();
+}
+
+/* ============================================================
+   АКТИВНАЯ ССЫЛКА В МЕНЮ
+   ============================================================ */
+const navLinks = document.querySelectorAll('.nav a');
+const sections = [...document.querySelectorAll('section')];
+window.addEventListener('scroll', () => {
+  const y = window.scrollY + 120;
+  let current = sections[0]?.id;
+  sections.forEach(s => { if (s.offsetTop <= y) current = s.id; });
+  navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+});
+
+/* ============================================================
+   ГРАФИКИ
+   ============================================================ */
+if (window.Chart) {
+  Chart.defaults.font.family = "'Inter',sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#475569';
+
+  new Chart(document.getElementById('chartTypes'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Водно-дисперсионные (ВД)', 'Органорастворимые', 'Прочие'],
+      datasets: [{
+        data: [47, 28, 25],
+        backgroundColor: ['#3b82f6', '#f59e0b', '#cbd5e1'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12, boxHeight: 12 } }
+      },
+      cutout: '62%'
+    }
+  });
+
+  new Chart(document.getElementById('chartProducers'), {
+    type: 'bar',
+    data: {
+      labels: ['Tikkurila','Knauf','Ceresit','Эмпилс','Лакра','ABC Farben','Ярославские краски','Прочие'],
+      datasets: [{
+        label: 'Доля рынка, %',
+        data: [15, 13, 12, 9, 5, 5, 4, 37],
+        backgroundColor: ['#3b82f6','#1e3a8a','#7c3aed','#059669','#f59e0b','#dc2626','#0891b2','#cbd5e1'],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
